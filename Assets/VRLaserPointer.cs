@@ -4,6 +4,10 @@ using System.IO;
 using System.Text;
 using Dummiesman;
 using UnityEngine.Networking;
+using Meta.WitAi;
+using Meta.WitAi.Json;
+using TMPro;
+using Oculus.Voice;
 
 public class VRLaserPointer : MonoBehaviour
 {
@@ -16,6 +20,8 @@ public class VRLaserPointer : MonoBehaviour
     private Transform rightHandAnchor;
     private GameObject loadedLampPrefab;
     private bool isLoading = false;
+    private AppVoiceExperience voiceService;
+    private TMP_Text status;
 
     void Start()
     {
@@ -24,6 +30,22 @@ public class VRLaserPointer : MonoBehaviour
         {
             Debug.LogError("Could not find RightHandAnchor!");
         }
+
+        voiceService = GameObject.Find("AppVoiceExperience").GetComponent<AppVoiceExperience>();
+        if (voiceService == null)
+        {
+            Debug.LogError("Could not find VoiceService!");
+        }
+        voiceService.VoiceEvents.OnFullTranscription.AddListener(OnFullTranscriptionString);
+
+        status = GameObject.Find("Canvas/Status").GetComponent<TMP_Text>();
+        if (status == null)
+        {
+            Debug.LogError("Could not find TextMesh Pro component!");
+        }
+
+        status.text = "Click the A button to spawn an object";
+
         CreateLaser();
     }
 
@@ -48,7 +70,8 @@ public class VRLaserPointer : MonoBehaviour
             Debug.Log("A Button Pressed - Starting lamp download");
             if (!isLoading)
             {
-                StartCoroutine(LoadAndSpawnLamp());
+                status.text = "Listening for voice command...";
+                voiceService.Activate();
             }
         }
     }
@@ -72,12 +95,26 @@ public class VRLaserPointer : MonoBehaviour
         lineRenderer.SetPosition(1, endPosition);
     }
 
-    private IEnumerator LoadAndSpawnLamp()
+    void OnFullTranscriptionString(string transcription)
     {
+        transcription = transcription.ToLower();
+        status.text = "Transcription received";
+
+        string BASE_URL = "https://4f1e-68-65-175-63.ngrok-free.app/generate";
+        string url = $"{BASE_URL}/{UnityWebRequest.EscapeURL(transcription)}";
+        Debug.Log($"Transcription URL: {url}");
+    
+        // Start loading object
+        StartCoroutine(LoadAndSpawnLamp(url));
+    }
+
+    private IEnumerator LoadAndSpawnLamp(string url)
+    {
+        status.text = "Loading object...";
         isLoading = true;
         Debug.Log("Starting lamp download...");
 
-        string url = "https://people.sc.fsu.edu/~jburkardt/data/obj/lamp.obj";
+        // url = "https://dreamscapeassetbucket.s3.us-west-1.amazonaws.com/output/blue_bird/output.obj";
         using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             yield return www.SendWebRequest();
@@ -132,7 +169,7 @@ public class VRLaserPointer : MonoBehaviour
                 Debug.LogError($"Error creating lamp object: {e.Message}\n{e.StackTrace}");
             }
         }
-
+        status.text = "Press A to spawn another object";
         isLoading = false;
         Debug.Log("Lamp spawning process completed");
     }

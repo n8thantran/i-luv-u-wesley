@@ -6,7 +6,7 @@ using UnityEngine;
 public class ObjFromStream : MonoBehaviour {
 	void Start () {
         //make www
-        var www = new WWW("https://people.sc.fsu.edu/~jburkardt/data/obj/lamp.obj");
+        var www = new WWW("https://dreamscapeassetbucket.s3.us-west-1.amazonaws.com/output/blue_bird/blue_bird+(1).obj");
         while (!www.isDone)
             System.Threading.Thread.Sleep(1);
         

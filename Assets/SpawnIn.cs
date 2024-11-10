@@ -3,6 +3,8 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
 using System.Collections;
+using Meta.WitAi;
+using Meta.WitAi.Json;
 
 public class SpawnIn : MonoBehaviour 
 {
@@ -12,6 +14,17 @@ public class SpawnIn : MonoBehaviour
     private bool isSpawning = false; // Prevent multiple simultaneous spawns
     private float spawnCooldown = 2f; // Time between spawns
     private float lastSpawnTime = 0f;
+    private string status = "Click the A button to spawn an object";
+    private VoiceService voiceService;
+
+    void Start()
+    {
+        voiceService = GetComponent<VoiceService>();
+        if (voiceService == null)
+        {
+            Debug.LogError("Could not find VoiceService!");
+        }
+    }
 
     void Awake()
     {
@@ -24,8 +37,17 @@ public class SpawnIn : MonoBehaviour
             !isSpawning && 
             Time.time - lastSpawnTime >= spawnCooldown)
         {
-            StartCoroutine(LoadFromURL());
+            voiceService.Activate();
         }
+    }
+
+    void OnFullTranscriptionString(string transcription)
+    {
+        string BASE_URL = "https://ngrok/generate/";
+        string url = $"{BASE_URL}/{UnityWebRequest.EscapeURL(transcription)}";
+    
+        // Start loading object
+        StartCoroutine(LoadFromURL(url));
     }
 
     void OnDestroy()
@@ -33,8 +55,9 @@ public class SpawnIn : MonoBehaviour
         // No longer needed
     }
 
-    IEnumerator LoadFromURL()
+    IEnumerator LoadFromURL(string url)
     {
+        status = "Loading object...";
         if (isSpawning) yield break;
         isSpawning = true;
         lastSpawnTime = Time.time;
@@ -49,8 +72,6 @@ public class SpawnIn : MonoBehaviour
 
         var centerEye = cameraRig.centerEyeAnchor;
         spawnPosition = centerEye.position + (centerEye.forward * spawnDistance);
-
-        string url = "https://people.sc.fsu.edu/~jburkardt/data/obj/lamp.obj";
         Debug.Log("Started loading object...");
         
         UnityWebRequest www = UnityWebRequest.Get(url);
@@ -96,6 +117,7 @@ public class SpawnIn : MonoBehaviour
         {
             www.Dispose();
             isSpawning = false;
+            status = "Click the A button to spawn an object";
         }
 
         yield return new WaitForSeconds(0.1f);
