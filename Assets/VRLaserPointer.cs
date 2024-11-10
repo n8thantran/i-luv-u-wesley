@@ -18,7 +18,7 @@ public class VRLaserPointer : MonoBehaviour
     private GameObject laserPointer;
     private LineRenderer lineRenderer;
     private Transform rightHandAnchor;
-    private GameObject loadedLampPrefab;
+    private GameObject loadedObjectPrefab;
     private bool isLoading = false;
     private AppVoiceExperience voiceService;
     private TMP_Text status;
@@ -67,7 +67,7 @@ public class VRLaserPointer : MonoBehaviour
             
         if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.RTouch))
         {
-            Debug.Log("A Button Pressed - Starting lamp download");
+            Debug.Log("A Button Pressed - Starting object download");
             if (!isLoading)
             {
                 status.text = "Listening for voice command...";
@@ -105,14 +105,14 @@ public class VRLaserPointer : MonoBehaviour
         Debug.Log($"Transcription URL: {url}");
     
         // Start loading object
-        StartCoroutine(LoadAndSpawnLamp(url));
+        StartCoroutine(LoadAndSpawnObject(url));
     }
 
-    private IEnumerator LoadAndSpawnLamp(string url)
+    private IEnumerator LoadAndSpawnObject(string url)
     {
         status.text = "Loading object...";
         isLoading = true;
-        Debug.Log("Starting lamp download...");
+        Debug.Log("Starting object download...");
 
         // url = "https://dreamscapeassetbucket.s3.us-west-1.amazonaws.com/output/blue_bird/output.obj";
         using (UnityWebRequest www = UnityWebRequest.Get(url))
@@ -121,19 +121,19 @@ public class VRLaserPointer : MonoBehaviour
 
             if (www.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"Failed to download lamp: {www.error}");
+                Debug.LogError($"Failed to download object: {www.error}");
                 isLoading = false;
                 yield break;
             }
 
-            Debug.Log("Lamp downloaded successfully, creating object...");
+            Debug.Log("Object downloaded successfully, creating object...");
             string objData = www.downloadHandler.text;
 
             try
             {
                 var textStream = new MemoryStream(Encoding.UTF8.GetBytes(objData));
-                loadedLampPrefab = new OBJLoader().Load(textStream);
-                Debug.Log("Lamp object created successfully");
+                loadedObjectPrefab = new OBJLoader().Load(textStream);
+                Debug.Log("Object created successfully");
 
                 Ray ray = new Ray(rightHandAnchor.position, rightHandAnchor.forward);
                 RaycastHit hit;
@@ -143,34 +143,34 @@ public class VRLaserPointer : MonoBehaviour
                     Vector3 spawnPosition = hit.point;
                     Quaternion spawnRotation = Quaternion.identity;
                     
-                    GameObject spawnedLamp = Instantiate(loadedLampPrefab, spawnPosition, spawnRotation);
-                    Debug.Log($"Lamp spawned at position: {spawnPosition}");
+                    GameObject spawnedObject = Instantiate(loadedObjectPrefab, spawnPosition, spawnRotation);
+                    Debug.Log($"Object spawned at position: {spawnPosition}");
 
-                    // Add a collider to the spawned lamp
-                    if (spawnedLamp.GetComponent<Collider>() == null)
+                    // Add a collider to the spawned object
+                    if (spawnedObject.GetComponent<Collider>() == null)
                     {
-                        spawnedLamp.AddComponent<BoxCollider>();
+                        spawnedObject.AddComponent<BoxCollider>();
                     }
 
                     // Add rigidbody for physics
-                    if (spawnedLamp.GetComponent<Rigidbody>() == null)
+                    if (spawnedObject.GetComponent<Rigidbody>() == null)
                     {
-                        Rigidbody rb = spawnedLamp.AddComponent<Rigidbody>();
+                        Rigidbody rb = spawnedObject.AddComponent<Rigidbody>();
                         rb.useGravity = true;
                     }
                 }
                 else
                 {
-                    Debug.LogWarning("No surface detected to spawn lamp");
+                    Debug.LogWarning("No surface detected to spawn object");
                 }
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"Error creating lamp object: {e.Message}\n{e.StackTrace}");
+                Debug.LogError($"Error creating object object: {e.Message}\n{e.StackTrace}");
             }
         }
         status.text = "Press A to spawn another object";
         isLoading = false;
-        Debug.Log("Lamp spawning process completed");
+        Debug.Log("Object spawning process completed");
     }
 }
