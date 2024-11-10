@@ -74,6 +74,12 @@ public class VRLaserPointer : MonoBehaviour
                 voiceService.Activate();
             }
         }
+        if (OVRInput.GetUp(OVRInput.Button.Two, OVRInput.Controller.RTouch))
+        {
+            Debug.Log("B Button Pressed - Respawn last object");
+            StartCoroutine(RespawnLastObject());
+            
+        }
     }
 
     void UpdateLaser()
@@ -100,7 +106,7 @@ public class VRLaserPointer : MonoBehaviour
         transcription = transcription.ToLower();
         status.text = "Transcription received";
 
-        string BASE_URL = "https://4f1e-68-65-175-63.ngrok-free.app/generate";
+        string BASE_URL = "https://fe1e-68-65-175-63.ngrok-free.app/generate";
         string url = $"{BASE_URL}/{UnityWebRequest.EscapeURL(transcription)}";
         Debug.Log($"Transcription URL: {url}");
     
@@ -169,8 +175,41 @@ public class VRLaserPointer : MonoBehaviour
                 Debug.LogError($"Error creating object object: {e.Message}\n{e.StackTrace}");
             }
         }
-        status.text = "Press A to spawn another object";
+        status.text = "Press A to spawn another object or B to respawn last object";
         isLoading = false;
         Debug.Log("Object spawning process completed");
+    }
+
+    private string RespawnLastObject()
+    {
+        Ray ray = new Ray(rightHandAnchor.position, rightHandAnchor.forward);
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit, laserDistance))
+        {
+            Vector3 spawnPosition = hit.point;
+            Quaternion spawnRotation = Quaternion.identity;
+            
+            GameObject spawnedObject = Instantiate(loadedObjectPrefab, spawnPosition, spawnRotation);
+            Debug.Log($"Object spawned at position: {spawnPosition}");
+
+            // Add a collider to the spawned object
+            if (spawnedObject.GetComponent<Collider>() == null)
+            {
+                spawnedObject.AddComponent<BoxCollider>();
+            }
+
+            // Add rigidbody for physics
+            if (spawnedObject.GetComponent<Rigidbody>() == null)
+            {
+                Rigidbody rb = spawnedObject.AddComponent<Rigidbody>();
+                rb.useGravity = true;
+            }
+        }
+        else
+        {
+            Debug.LogWarning("No surface detected to spawn object");
+        }
+        return "Object respawned";
     }
 }
