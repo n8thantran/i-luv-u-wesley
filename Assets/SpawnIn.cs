@@ -32,6 +32,8 @@ public class SpawnIn : MonoBehaviour
     IEnumerator LoadFromURL()
     {
         string url = "https://people.sc.fsu.edu/~jburkardt/data/obj/lamp.obj";
+        // string url = "https://localhost:3000/" + objName;
+        // string url = await GetURL("https://localhost:3000/", objName);
         Debug.Log("Started loading object...");
         
         using (UnityWebRequest www = UnityWebRequest.Get(url))

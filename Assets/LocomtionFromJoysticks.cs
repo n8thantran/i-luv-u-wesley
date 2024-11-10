@@ -1,43 +1,40 @@
 using UnityEngine;
-using Unity.XR.CoreUtils;
-using UnityEngine.XR.Interaction.Toolkit;
-using UnityEngine.InputSystem;
 
 public class JoystickLocomotion : MonoBehaviour
 {
     public float speed = 2.0f;
-    private XROrigin xrOrigin;
-    private ActionBasedContinuousMoveProvider moveProvider;
-    [SerializeField] private InputActionReference moveInputActionReference;
+    private Transform cameraRig;
+    private Transform centerEyeAnchor;
 
     void Start()
     {
-        // Find XR Origin in the scene
-        xrOrigin = FindObjectOfType<XROrigin>();
-        if (xrOrigin == null)
+        // Find the OVRCameraRig in parent hierarchy
+        cameraRig = transform.parent.parent;
+        if (cameraRig == null)
         {
-            Debug.LogError("No XROrigin found in scene!");
+            Debug.LogError("Cannot find OVRCameraRig!");
             return;
         }
 
-        // Set up move provider if needed
-        moveProvider = GetComponent<ActionBasedContinuousMoveProvider>();
-        if (moveProvider == null)
+        // Get the center eye anchor for direction reference
+        centerEyeAnchor = cameraRig.Find("TrackingSpace/CenterEyeAnchor");
+        if (centerEyeAnchor == null)
         {
-            moveProvider = gameObject.AddComponent<ActionBasedContinuousMoveProvider>();
+            Debug.LogError("Cannot find CenterEyeAnchor!");
+            return;
         }
     }
 
     void Update()
     {
-        if (xrOrigin == null || moveInputActionReference == null) return;
+        if (cameraRig == null || centerEyeAnchor == null) return;
 
-        // Read the movement input
-        Vector2 input = moveInputActionReference.action.ReadValue<Vector2>();
+        // Read input from left thumbstick
+        Vector2 input = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick);
 
         // Get the camera's forward and right vectors
-        Vector3 forward = xrOrigin.Camera.transform.forward;
-        Vector3 right = xrOrigin.Camera.transform.right;
+        Vector3 forward = centerEyeAnchor.forward;
+        Vector3 right = centerEyeAnchor.right;
 
         // Project to horizontal plane
         forward.y = 0;
@@ -45,22 +42,8 @@ public class JoystickLocomotion : MonoBehaviour
         forward.Normalize();
         right.Normalize();
 
-        // Calculate movement direction
+        // Calculate and apply movement
         Vector3 movement = (forward * input.y + right * input.x) * speed * Time.deltaTime;
-
-        // Apply movement to the XR Origin
-        xrOrigin.transform.position += movement;
-    }
-
-    private void OnEnable()
-    {
-        if (moveInputActionReference != null)
-            moveInputActionReference.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        if (moveInputActionReference != null)
-            moveInputActionReference.action.Disable();
+        cameraRig.position += movement;
     }
 }
